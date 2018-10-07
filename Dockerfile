@@ -31,8 +31,8 @@ COPY icinga2-ido.conf /etc/icinga2/features-available/ido-mysql.conf
 RUN ln -vs /etc/icinga2/features-available/ido-mysql.conf /etc/icinga2/features-enabled/ido-mysql.conf
 
 COPY php-icingaweb2.ini /etc/php/7.0/apache2/conf.d/99-icingaweb2.ini
-COPY apache2-icingaweb2-noauthn.conf /etc/apache2/conf-available/icingaweb2-noauthn.conf
-RUN a2enconf icingaweb2-noauthn
+COPY apache2-icingaweb2.conf /etc/apache2/conf-available/icingaweb2-ext.conf
+RUN a2enconf icingaweb2-ext
 RUN install -o root -g icingaweb2 -m 02770 -d /var/log/icingaweb2
 ADD --chown=www-data:icingaweb2 icingaweb2 /etc/icingaweb2
 RUN install -o www-data -g icingaweb2 -m 02770 -d /etc/icingaweb2/enabledModules
