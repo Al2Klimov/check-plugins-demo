@@ -19,8 +19,17 @@ ADD apt-ext.list /etc/apt/sources.list.d/ext.list
 RUN apt-get update ;\
 	DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --no-install-suggests -y \
 	icinga2-{bin,ido-mysql} dbconfig-no-thanks mariadb-server \
-	apache2 icingaweb2{,-module-monitoring} php7.0-{intl,imagick,mysql} locales \
-	influxdb grafana ;\
+	apache2 icingaweb2{,-module-monitoring} php7.0-{intl,imagick,mysql,curl} locales \
+	influxdb grafana git ;\
+	pushd /usr/share/icingaweb2/modules ;\
+	git clone https://github.com/Mikesch-mp/icingaweb2-module-grafana.git grafana ;\
+	pushd grafana ;\
+	git checkout dfce2c20708442d558ee90c5c3287bbdf624c435 ;\
+	rm -rf .git ;\
+	popd ;\
+	popd ;\
+	DEBIAN_FRONTEND=noninteractive apt-get purge -y git ;\
+	DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y ;\
 	apt-get clean ;\
 	rm -vrf /var/lib/apt/lists/* /etc/icinga2/conf.d/* /etc/icingaweb2/* ;\
 	perl -pi -e 's~//~~ if /const NodeName/' /etc/icinga2/constants.conf ;\
@@ -55,7 +64,7 @@ RUN bash -exo pipefail -c '. /etc/default/influxdb; exec nosu influxdb influxdb 
 RUN bash -exo pipefail -c 'cd /usr/share/grafana; . /etc/default/grafana-server; exec nosu grafana grafana grafana-server "--config=$CONF_FILE" "--pidfile=/var/run/grafana/grafana-server.pid" "cfg:default.paths.logs=$LOG_DIR" "cfg:default.paths.data=$DATA_DIR" "cfg:default.paths.plugins=$PLUGINS_DIR" "cfg:default.paths.provisioning=$PROVISIONING_CFG_DIR"' & \
 	GRAFANA_PID="$!" ;\
 	while ! perl -e 'use IO::Socket; IO::Socket::INET->new("127.0.0.1:3000") or die $@'; do sleep 1; done ;\
-	perl -e 'use IO::Socket; my $s = IO::Socket::INET->new("127.0.0.1:3000") or die $@; $s->send("POST /api/datasources HTTP/1.0\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 174\r\n\r\n{\"name\":\"Icinga 2\",\"type\":\"influxdb\",\"url\":\"http://127.0.0.1:8086\",\"access\":\"proxy\",\"jsonData\":{},\"isDefault\":true,\"database\":\"icinga2\",\"user\":\"icinga2\",\"password\":\"icinga2\"}") or die $@; sleep 1' ;\
+	perl -e 'use IO::Socket; { local $/ = undef; local @ARGV = ("/usr/share/icingaweb2/modules/grafana/dashboards/influxdb/icinga2-default.json"); $db1 = <> } { local $/ = undef; local @ARGV = ("/usr/share/icingaweb2/modules/grafana/dashboards/influxdb/base-metrics.json"); $db2 = <> } for my $r (["datasources", "{\"name\":\"Icinga 2\",\"type\":\"influxdb\",\"url\":\"http://127.0.0.1:8086\",\"access\":\"proxy\",\"jsonData\":{},\"isDefault\":true,\"database\":\"icinga2\",\"user\":\"icinga2\",\"password\":\"icinga2\"}"], ["dashboards/db", "{\"dashboard\":".($db1 =~ s/"\$\{DS_ICINGA2\}"/null/gr).",\"folderId\":0,\"overwrite\":false}"], ["dashboards/db", "{\"dashboard\":".($db2 =~ s/"\$\{DS_ICINGA2\}"/null/gr).",\"folderId\":0,\"overwrite\":false}"]) { my $s = IO::Socket::INET->new("127.0.0.1:3000") or die $@; $s->send("POST /api/".${$r}[0]." HTTP/1.0\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: ".length(${$r}[1])."\r\n\r\n".${$r}[1]) or die $@; sleep 1 }' ;\
 	kill "$GRAFANA_PID" ;\
 	while test -e "/proc/$GRAFANA_PID"; do sleep 1; done
 
@@ -66,11 +75,13 @@ RUN . /usr/lib/icinga2/icinga2 ;\
 	for f in command influxdb ido-mysql; do icinga2 feature enable $f; done
 
 COPY php-icingaweb2.ini /etc/php/7.0/apache2/conf.d/99-icingaweb2.ini
-RUN install -o root -g icingaweb2 -m 02770 -d /var/log/icingaweb2
 ADD --chown=www-data:icingaweb2 icingaweb2 /etc/icingaweb2
-RUN install -o www-data -g icingaweb2 -m 02770 -d /etc/icingaweb2/enabledModules
-RUN ln -vs /usr/share/icingaweb2/modules/monitoring /etc/icingaweb2/enabledModules/monitoring
-RUN locale-gen -j 4
+
+RUN install -o root -g icingaweb2 -m 02770 -d /var/log/icingaweb2 ;\
+	install -o www-data -g icingaweb2 -m 02770 -d /etc/icingaweb2/enabledModules ;\
+	ln -vs /usr/share/icingaweb2/modules/monitoring /etc/icingaweb2/enabledModules/monitoring ;\
+	ln -vs /usr/share/icingaweb2/modules/grafana /etc/icingaweb2/enabledModules/grafana ;\
+	locale-gen -j 4
 
 COPY apache2-ext.conf /etc/apache2/conf-available/ext.conf
 RUN a2enmod proxy; a2enmod proxy_http; a2enconf ext
