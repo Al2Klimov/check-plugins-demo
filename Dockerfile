@@ -9,6 +9,7 @@ RUN apt-get update ;\
 	influxdb ;\
 	apt-get clean ;\
 	rm -vrf /var/lib/apt/lists/* /etc/icinga2/conf.d/* /etc/icingaweb2/* ;\
+	perl -pi -e 's~//~~ if /const NodeName/' /etc/icinga2/constants.conf ;\
 	perl -pi -e 's~//~~' /etc/icinga2/features-available/influxdb.conf ;\
 	perl -pi -e 'if (!%locales) { %locales = (); for my $d ("", "/modules/monitoring") { for my $f (glob "/usr/share/icingaweb2${d}/application/locale/*_*") { if ($f =~ m~/(\w+)$~) { $locales{$1} = undef } } } } s/^# ?// if (/ UTF-8$/ && /^# (\w+)/ && exists $locales{$1})' /etc/locale.gen
 
