@@ -1,0 +1,10 @@
+digraph {
+	icinga2 -> mysql -> icingaweb2;
+	icinga2 -> influxdb -> grafana -> icingaweb2;
+
+	icinga2 [label="Icinga 2"];
+	icingaweb2 [label="Icinga Web 2"];
+	mysql [label="MySQL\n(IDO)"];
+	influxdb [label="InfluxDB\n(check results' perfdata)"];
+	grafana [label="Grafana"];
+}
