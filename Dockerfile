@@ -87,5 +87,6 @@ COPY apache2-ext.conf /etc/apache2/conf-available/ext.conf
 RUN a2enmod proxy; a2enmod proxy_http; a2enconf ext
 
 COPY --from=ochinchina/supervisord:latest /usr/local/bin/supervisord /usr/local/bin/supervisord
-COPY supervisord.conf /supervisord.conf
-CMD ["/usr/local/bin/supervisord", "-c", "/supervisord.conf"]
+RUN mkdir -p /etc/supervisord/conf.d
+COPY supervisord.conf /etc/supervisord/
+CMD ["/usr/local/bin/supervisord", "-c", "/etc/supervisord/supervisord.conf"]
