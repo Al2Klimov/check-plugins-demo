@@ -32,6 +32,7 @@ RUN apt-get update ;\
 	DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y ;\
 	apt-get clean ;\
 	rm -vrf /var/lib/apt/lists/* /etc/icinga2/conf.d/* /etc/icingaweb2/* ;\
+	a2dissite 000-default ;\
 	perl -pi -e 's~//~~ if /const NodeName/' /etc/icinga2/constants.conf ;\
 	perl -pi -e 's~//~~' /etc/icinga2/features-available/influxdb.conf ;\
 	perl -pi -e 'if (!%locales) { %locales = (); for my $d ("", "/modules/monitoring") { for my $f (glob "/usr/share/icingaweb2${d}/application/locale/*_*") { if ($f =~ m~/(\w+)$~) { $locales{$1} = undef } } } } s/^# ?// if (/ UTF-8$/ && /^# (\w+)/ && exists $locales{$1})' /etc/locale.gen
@@ -81,8 +82,9 @@ RUN install -o root -g icingaweb2 -m 02770 -d /var/log/icingaweb2 ;\
 	ln -vs /usr/share/icingaweb2/modules/grafana /etc/icingaweb2/enabledModules/grafana ;\
 	locale-gen -j 4
 
-COPY apache2-ext.conf /etc/apache2/conf-available/ext.conf
-RUN a2enmod proxy; a2enmod proxy_http; a2enconf ext
+COPY apache2-site.conf /etc/apache2/sites-available/check-plugins-demo.conf
+RUN mkdir -p /etc/apache2/sites-available/check-plugins-demo.d ;\
+	a2enmod proxy; a2enmod proxy_http; a2ensite check-plugins-demo
 
 COPY --from=ochinchina/supervisord:latest /usr/local/bin/supervisord /usr/local/bin/supervisord
 RUN mkdir -p /etc/supervisord/conf.d
