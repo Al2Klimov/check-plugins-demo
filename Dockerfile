@@ -38,9 +38,8 @@ RUN apt-get update ;\
 
 COPY --from=grandmaster/nosu:latest /usr/local/bin/nosu /usr/local/bin/nosu
 
-RUN . /usr/lib/icinga2/icinga2 ;\
-	. /etc/default/icinga2 ;\
-	/usr/lib/icinga2/prepare-dirs /usr/lib/icinga2/icinga2
+RUN . /etc/default/icinga2 ;\
+	/usr/lib/icinga2/prepare-dirs /etc/default/icinga2
 
 RUN install -m 755 -o mysql -g root -d /var/run/mysqld
 
@@ -70,8 +69,7 @@ RUN bash -exo pipefail -c 'cd /usr/share/grafana; . /etc/default/grafana-server;
 
 COPY icinga2-ido.conf /etc/icinga2/features-available/ido-mysql.conf
 
-RUN . /usr/lib/icinga2/icinga2 ;\
-	. /etc/default/icinga2 ;\
+RUN . /etc/default/icinga2 ;\
 	for f in command influxdb ido-mysql; do icinga2 feature enable $f; done
 
 COPY php-icingaweb2.ini /etc/php/7.0/apache2/conf.d/99-icingaweb2.ini
