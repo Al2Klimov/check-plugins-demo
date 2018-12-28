@@ -39,7 +39,7 @@ RUN apt-get update ;\
 
 COPY --from=grandmaster/nosu:latest /usr/local/bin/nosu /usr/local/bin/nosu
 
-RUN . /etc/default/icinga2 ;\
+RUN set -a; . /etc/default/icinga2; set +a ;\
 	/usr/lib/icinga2/prepare-dirs /etc/default/icinga2
 
 RUN install -m 755 -o mysql -g root -d /var/run/mysqld
@@ -54,14 +54,14 @@ RUN mysqld -u mysql & \
 	kill "$MYSQLD_PID" ;\
 	while test -e "/proc/$MYSQLD_PID"; do sleep 1; done
 
-RUN bash -exo pipefail -c '. /etc/default/influxdb; exec nosu influxdb influxdb influxd -config /etc/influxdb/influxdb.conf $INFLUXD_OPTS' & \
+RUN bash -exo pipefail -c 'set -a; . /etc/default/influxdb; set +a; exec nosu influxdb influxdb influxd -config /etc/influxdb/influxdb.conf $INFLUXD_OPTS' & \
 	INFLUXD_PID="$!" ;\
 	while ! perl -e 'use IO::Socket; IO::Socket::INET->new("127.0.0.1:8086") or die $@'; do sleep 1; done ;\
 	perl -e 'use IO::Socket; for my $q ("create+database+icinga2", "create+user+icinga2+with+password+%27icinga2%27", "grant+all+on+icinga2+to+icinga2") { my $s = IO::Socket::INET->new("127.0.0.1:8086") or die $@; $s->send("POST /query?chunked=true&db=&epoch=ns&q=${q} HTTP/1.0\r\nHost: localhost:8086\r\nUser-Agent: InfluxDBShell/1.0.2\r\nContent-Length: 0\r\n\r\n") or die $@; sleep 1 }' ;\
 	kill "$INFLUXD_PID" ;\
 	while test -e "/proc/$INFLUXD_PID"; do sleep 1; done
 
-RUN bash -exo pipefail -c 'cd /usr/share/grafana; . /etc/default/grafana-server; exec nosu grafana grafana grafana-server "--config=$CONF_FILE" "--pidfile=/var/run/grafana/grafana-server.pid" "cfg:default.paths.logs=$LOG_DIR" "cfg:default.paths.data=$DATA_DIR" "cfg:default.paths.plugins=$PLUGINS_DIR" "cfg:default.paths.provisioning=$PROVISIONING_CFG_DIR"' & \
+RUN bash -exo pipefail -c 'cd /usr/share/grafana; set -a; . /etc/default/grafana-server; set +a; exec nosu grafana grafana grafana-server "--config=$CONF_FILE" "--pidfile=/var/run/grafana/grafana-server.pid" "cfg:default.paths.logs=$LOG_DIR" "cfg:default.paths.data=$DATA_DIR" "cfg:default.paths.plugins=$PLUGINS_DIR" "cfg:default.paths.provisioning=$PROVISIONING_CFG_DIR"' & \
 	GRAFANA_PID="$!" ;\
 	while ! perl -e 'use IO::Socket; IO::Socket::INET->new("127.0.0.1:3000") or die $@'; do sleep 1; done ;\
 	perl -e 'use IO::Socket; { local $/ = undef; local @ARGV = ("/usr/share/icingaweb2/modules/grafana/dashboards/influxdb/icinga2-default.json"); $db1 = <> } for my $r (["datasources", "{\"name\":\"Icinga 2\",\"type\":\"influxdb\",\"url\":\"http://127.0.0.1:8086\",\"access\":\"proxy\",\"jsonData\":{},\"isDefault\":true,\"database\":\"icinga2\",\"user\":\"icinga2\",\"password\":\"icinga2\"}"], ["dashboards/db", "{\"dashboard\":".($db1 =~ s/"\$\{DS_ICINGA2\}"/null/gr).",\"folderId\":0,\"overwrite\":false}"]) { my $s = IO::Socket::INET->new("127.0.0.1:3000") or die $@; $s->send("POST /api/".${$r}[0]." HTTP/1.0\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: ".length(${$r}[1])."\r\n\r\n".${$r}[1]) or die $@; sleep 1 }' ;\
@@ -70,7 +70,7 @@ RUN bash -exo pipefail -c 'cd /usr/share/grafana; . /etc/default/grafana-server;
 
 COPY icinga2-ido.conf /etc/icinga2/features-available/ido-mysql.conf
 
-RUN . /etc/default/icinga2 ;\
+RUN set -a; . /etc/default/icinga2; set +a ;\
 	for f in command influxdb ido-mysql; do icinga2 feature enable $f; done
 
 COPY php-icingaweb2.ini /etc/php/7.0/apache2/conf.d/99-icingaweb2.ini
