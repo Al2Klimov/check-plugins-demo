@@ -1,4 +1,4 @@
-FROM debian:9
+FROM debian:10
 
 SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 
@@ -19,7 +19,7 @@ ADD apt-ext.list /etc/apt/sources.list.d/ext.list
 RUN apt-get update ;\
 	DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --no-install-suggests -y \
 	icinga2-{bin,ido-mysql} dbconfig-no-thanks mariadb-server \
-	apache2 icingaweb2{,-module-monitoring} php7.0-{intl,imagick,mysql,curl} locales \
+	apache2 icingaweb2{,-module-monitoring} php7.3-{intl,imagick,mysql,curl} locales \
 	influxdb grafana git ;\
 	pushd /usr/share/icingaweb2/modules ;\
 	git clone https://github.com/Mikesch-mp/icingaweb2-module-grafana.git grafana ;\
@@ -73,7 +73,7 @@ COPY icinga2-ido.conf /etc/icinga2/features-available/ido-mysql.conf
 RUN set -a; . /etc/default/icinga2; set +a ;\
 	for f in command influxdb ido-mysql; do icinga2 feature enable $f; done
 
-COPY php-icingaweb2.ini /etc/php/7.0/apache2/conf.d/99-icingaweb2.ini
+COPY php-icingaweb2.ini /etc/php/7.3/apache2/conf.d/99-icingaweb2.ini
 ADD --chown=www-data:icingaweb2 icingaweb2 /etc/icingaweb2
 
 RUN install -o root -g icingaweb2 -m 02770 -d /var/log/icingaweb2 ;\
