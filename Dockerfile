@@ -10,7 +10,7 @@ RUN apt-get update ;\
 	apt-key adv --fetch-keys \
 		'https://packages.icinga.com/icinga.key' \
 		'https://repos.influxdata.com/influxdb.key' \
-		'https://packagecloud.io/grafana/stable/gpgkey' ;\
+		'https://packages.grafana.com/gpg.key' ;\
 	DEBIAN_FRONTEND=noninteractive apt-get purge -y gnupg2 dirmngr ;\
 	DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y
 
